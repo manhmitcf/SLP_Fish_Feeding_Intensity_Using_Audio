@@ -3,13 +3,11 @@ import sys
 import argparse
 
 # --- KAGGLE SECRETS SETUP (MUST BE BEFORE IMPORTS) ---
-# Try to load secrets from Kaggle environment and set them as Environment Variables
 try:
     from kaggle_secrets import UserSecretsClient
     print("Detected Kaggle environment. Loading secrets...")
     user_secrets = UserSecretsClient()
     
-    # Load RAW_DATA_PATH
     try:
         raw_path = user_secrets.get_secret("RAW_DATA_PATH")
         if raw_path:
@@ -18,7 +16,6 @@ try:
     except Exception:
         print("Secret 'RAW_DATA_PATH' not found.")
 
-    # Load CUDA_VISIBLE_DEVICES (Optional)
     try:
         cuda_dev = user_secrets.get_secret("CUDA_VISIBLE_DEVICES")
         if cuda_dev:
@@ -28,7 +25,6 @@ try:
         pass
 
 except ImportError:
-    # Not running on Kaggle or library not found
     pass
 
 # --- IMPORTS ---
@@ -37,7 +33,9 @@ import numpy as np
 import random
 from preprocessing.audio_preprocessor import AudioPreprocessor
 from models.swin_transformer import FishSwinTransformer
+from models.resnet_model import FishResNet
 from trainers.swin_trainer import SwinTrainer
+from trainers.resnet_trainer import ResNetTrainer
 
 def set_seed(seed=42):
     """Sets the seed for reproducibility."""
@@ -52,16 +50,14 @@ def set_seed(seed=42):
 
 def parse_args():
     """Parses command line arguments."""
-    parser = argparse.ArgumentParser(description="Train Swin Transformer for Fish Feeding Intensity")
+    parser = argparse.ArgumentParser(description="Train Model for Fish Feeding Intensity")
     
-    parser.add_argument("--batch_size", type=int, default=32, help="Batch size for training (default: 32)")
-    parser.add_argument("--epochs", type=int, default=30, help="Number of training epochs (default: 30)")
-    parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate (default: 1e-4)")
-    parser.add_argument("--seed", type=int, default=42, help="Random seed (default: 42)")
-    parser.add_argument("--save_dir", type=str, default="./checkpoints/swin_tiny", help="Directory to save checkpoints")
-    
-    # Add argument to control pretraining
-    # Default is False as per your request (Train from scratch)
+    parser.add_argument("--model", type=str, default="swin", choices=["swin", "resnet"], help="Model architecture (swin or resnet)")
+    parser.add_argument("--batch_size", type=int, default=32, help="Batch size")
+    parser.add_argument("--epochs", type=int, default=30, help="Number of epochs")
+    parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed")
+    parser.add_argument("--save_dir", type=str, default="./checkpoints", help="Base directory to save checkpoints")
     parser.add_argument("--pretrained", action="store_true", help="Use ImageNet pretrained weights")
     
     return parser.parse_args()
@@ -70,15 +66,18 @@ def main():
     # --- 1. Configuration ---
     args = parse_args()
     
+    MODEL_NAME = args.model
     BATCH_SIZE = args.batch_size
     NUM_EPOCHS = args.epochs
     LEARNING_RATE = args.lr
     SEED = args.seed
-    SAVE_DIR = args.save_dir
+    # Create specific save directory for the model
+    SAVE_DIR = os.path.join(args.save_dir, f"{MODEL_NAME}_tiny" if MODEL_NAME == "swin" else f"{MODEL_NAME}50")
     DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
-    USE_PRETRAINED = args.pretrained # Will be False by default unless --pretrained is passed
+    USE_PRETRAINED = args.pretrained 
     
     print(f"Training Configuration:")
+    print(f"- Model: {MODEL_NAME}")
     print(f"- Device: {DEVICE}")
     print(f"- Batch Size: {BATCH_SIZE}")
     print(f"- Epochs: {NUM_EPOCHS}")
@@ -93,14 +92,11 @@ def main():
     print("\n[1/3] Preparing Data...")
     preprocessor = AudioPreprocessor()
     
-    # Try to get dataloaders
     train_loader, val_loader, test_loader = preprocessor.get_dataloaders(batch_size=BATCH_SIZE)
     
-    # If data is missing (loaders are None), run preprocessing automatically
     if train_loader is None:
         print("Processed data not found. Running preprocessing pipeline (split_and_save)...")
         preprocessor.split_and_save()
-        # Reload dataloaders after processing
         train_loader, val_loader, test_loader = preprocessor.get_dataloaders(batch_size=BATCH_SIZE)
         
         if train_loader is None:
@@ -112,18 +108,21 @@ def main():
     print(f"- Val batches: {len(val_loader)}")
 
     # --- 3. Model Initialization ---
-    print("\n[2/3] Initializing Model...")
-    # Pass the pretrained flag (False by default now)
-    model = FishSwinTransformer(num_classes=4, pretrained=USE_PRETRAINED)
-    model.to(DEVICE)
+    print(f"\n[2/3] Initializing Model ({MODEL_NAME})...")
     
-    # Optional: Print model summary
-    print(f"Model created: Swin Transformer Tiny")
+    if MODEL_NAME == "swin":
+        model = FishSwinTransformer(num_classes=4, pretrained=USE_PRETRAINED)
+        TrainerClass = SwinTrainer
+    elif MODEL_NAME == "resnet":
+        model = FishResNet(num_classes=4, pretrained=USE_PRETRAINED)
+        TrainerClass = ResNetTrainer
+        
+    model.to(DEVICE)
     print(f"Trainable Parameters: {model.count_parameters():,}")
 
     # --- 4. Training ---
     print("\n[3/3] Starting Training...")
-    trainer = SwinTrainer(
+    trainer = TrainerClass(
         model=model,
         train_loader=train_loader,
         val_loader=val_loader,
