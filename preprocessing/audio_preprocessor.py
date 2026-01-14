@@ -259,6 +259,11 @@ class AudioPreprocessor(BasePreprocessor):
         val_dataset = ProcessedDataset(val_dir)
         test_dataset = ProcessedDataset(test_dir)
 
+        # --- FIX: Check if datasets are empty ---
+        if len(train_dataset) == 0:
+            print("Processed data directories exist but are empty.")
+            return None, None, None
+
         train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, collate_fn=collate_fn)
         val_loader = DataLoader(val_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
         test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, collate_fn=collate_fn)
@@ -268,8 +273,8 @@ class AudioPreprocessor(BasePreprocessor):
 if __name__ == "__main__":
     preprocessor = AudioPreprocessor()
     # Uncomment the line below to run preprocessing
-    preprocessor.split_and_save()
-
+    # preprocessor.split_and_save()
+    
     # Example of getting dataloaders
-    train_loader, val_loader, test_loader = preprocessor.get_dataloaders(batch_size=32)
-    print("DataLoaders created successfully.")
+    # train_loader, val_loader, test_loader = preprocessor.get_dataloaders(batch_size=32)
+    # print("DataLoaders created successfully.")
