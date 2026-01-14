@@ -121,7 +121,6 @@ class AudioPreprocessor(BasePreprocessor):
     def process_file(self, file_path):
         """
         Reads a WAV file and converts it to a Log-Mel Spectrogram.
-        Applies Min-Max Normalization to scale values to [0, 1].
 
         Args:
             file_path (str): Path to the input .wav file.
@@ -146,15 +145,6 @@ class AudioPreprocessor(BasePreprocessor):
             # Avoid log(0) by taking maximum with a small epsilon
             melspec = np.maximum(melspec, 1e-10)
             log_mel = np.log(melspec)
-
-            # --- NORMALIZATION (Min-Max Scaling to [0, 1]) ---
-            # This is crucial for Swin Transformer which expects image-like input
-            min_val = log_mel.min()
-            max_val = log_mel.max()
-            if max_val - min_val > 1e-6:
-                log_mel = (log_mel - min_val) / (max_val - min_val)
-            else:
-                log_mel = np.zeros_like(log_mel)
 
             # Convert to Tensor and add channel dimension: [1, n_mels, time]
             tensor = torch.tensor(log_mel, dtype=torch.float32).unsqueeze(0)
