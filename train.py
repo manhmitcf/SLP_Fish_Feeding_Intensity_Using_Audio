@@ -1,7 +1,40 @@
+import os
+import sys
+import argparse
+
+# --- KAGGLE SECRETS SETUP (MUST BE BEFORE IMPORTS) ---
+# Try to load secrets from Kaggle environment and set them as Environment Variables
+try:
+    from kaggle_secrets import UserSecretsClient
+    print("Detected Kaggle environment. Loading secrets...")
+    user_secrets = UserSecretsClient()
+    
+    # Load RAW_DATA_PATH
+    try:
+        raw_path = user_secrets.get_secret("RAW_DATA_PATH")
+        if raw_path:
+            os.environ["RAW_DATA_PATH"] = raw_path
+            print(f"Set RAW_DATA_PATH from Secrets: {raw_path}")
+    except Exception:
+        print("Secret 'RAW_DATA_PATH' not found.")
+
+    # Load CUDA_VISIBLE_DEVICES (Optional)
+    try:
+        cuda_dev = user_secrets.get_secret("CUDA_VISIBLE_DEVICES")
+        if cuda_dev:
+            os.environ["CUDA_VISIBLE_DEVICES"] = cuda_dev
+            print(f"Set CUDA_VISIBLE_DEVICES from Secrets: {cuda_dev}")
+    except Exception:
+        pass
+
+except ImportError:
+    # Not running on Kaggle or library not found
+    pass
+
+# --- IMPORTS ---
 import torch
 import numpy as np
 import random
-import os
 from preprocessing.audio_preprocessor import AudioPreprocessor
 from models.swin_transformer import FishSwinTransformer
 from trainers.swin_trainer import SwinTrainer
@@ -17,20 +50,35 @@ def set_seed(seed=42):
         torch.backends.cudnn.deterministic = True
         torch.backends.cudnn.benchmark = False
 
+def parse_args():
+    """Parses command line arguments."""
+    parser = argparse.ArgumentParser(description="Train Swin Transformer for Fish Feeding Intensity")
+    
+    parser.add_argument("--batch_size", type=int, default=32, help="Batch size for training (default: 32)")
+    parser.add_argument("--epochs", type=int, default=30, help="Number of training epochs (default: 30)")
+    parser.add_argument("--lr", type=float, default=1e-4, help="Learning rate (default: 1e-4)")
+    parser.add_argument("--seed", type=int, default=42, help="Random seed (default: 42)")
+    parser.add_argument("--save_dir", type=str, default="./checkpoints/swin_tiny", help="Directory to save checkpoints")
+    
+    return parser.parse_args()
+
 def main():
     # --- 1. Configuration ---
-    SEED = 42
-    BATCH_SIZE = 32
-    NUM_EPOCHS = 30
-    LEARNING_RATE = 1e-4
+    args = parse_args()
+    
+    BATCH_SIZE = args.batch_size
+    NUM_EPOCHS = args.epochs
+    LEARNING_RATE = args.lr
+    SEED = args.seed
+    SAVE_DIR = args.save_dir
     DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
-    SAVE_DIR = './checkpoints/swin_tiny'
     
     print(f"Training Configuration:")
     print(f"- Device: {DEVICE}")
     print(f"- Batch Size: {BATCH_SIZE}")
     print(f"- Epochs: {NUM_EPOCHS}")
     print(f"- Learning Rate: {LEARNING_RATE}")
+    print(f"- Seed: {SEED}")
     print(f"- Save Directory: {SAVE_DIR}")
     
     set_seed(SEED)
