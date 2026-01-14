@@ -60,6 +60,10 @@ def parse_args():
     parser.add_argument("--seed", type=int, default=42, help="Random seed (default: 42)")
     parser.add_argument("--save_dir", type=str, default="./checkpoints/swin_tiny", help="Directory to save checkpoints")
     
+    # Add argument to control pretraining
+    # Default is False as per your request (Train from scratch)
+    parser.add_argument("--pretrained", action="store_true", help="Use ImageNet pretrained weights")
+    
     return parser.parse_args()
 
 def main():
@@ -72,6 +76,7 @@ def main():
     SEED = args.seed
     SAVE_DIR = args.save_dir
     DEVICE = 'cuda' if torch.cuda.is_available() else 'cpu'
+    USE_PRETRAINED = args.pretrained # Will be False by default unless --pretrained is passed
     
     print(f"Training Configuration:")
     print(f"- Device: {DEVICE}")
@@ -80,6 +85,7 @@ def main():
     print(f"- Learning Rate: {LEARNING_RATE}")
     print(f"- Seed: {SEED}")
     print(f"- Save Directory: {SAVE_DIR}")
+    print(f"- Use Pretrained Weights: {USE_PRETRAINED}")
     
     set_seed(SEED)
 
@@ -107,7 +113,8 @@ def main():
 
     # --- 3. Model Initialization ---
     print("\n[2/3] Initializing Model...")
-    model = FishSwinTransformer(num_classes=4, pretrained=True)
+    # Pass the pretrained flag (False by default now)
+    model = FishSwinTransformer(num_classes=4, pretrained=USE_PRETRAINED)
     model.to(DEVICE)
     
     # Optional: Print model summary
