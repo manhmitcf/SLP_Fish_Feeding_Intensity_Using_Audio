@@ -2,3 +2,5 @@ librosa
 numpy
 tqdm
 scikit-learn
+torch
+torchvision

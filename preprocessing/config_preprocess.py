@@ -1,34 +1,19 @@
 import os
 
-# --- PATHS ---
-CURRENT_DIR = os.path.dirname(os.path.abspath(__file__))
-PROJECT_ROOT = os.path.dirname(CURRENT_DIR)
+"""
+Configuration file for Audio Preprocessing.
+Simplifies path management by reading directly from Environment Variables.
+"""
 
-# 1. Priority: Get from Environment Variable (set by user on Kaggle/Terminal)
-ENV_RAW_PATH = os.environ.get("RAW_DATA_PATH")
 
-# 2. Fallback: Default Kaggle path (if user forgets to set env)
-DEFAULT_KAGGLE_PATH = "/kaggle/input/fish-feeding-intensity"
+# 1. Raw Data Path: Must be set via Environment Variable 'RAW_DATA_PATH'
+# Example: export RAW_DATA_PATH="/path/to/your/dataset"
+# Defaults to './dataset' if not set.
+RAW_DATA_ROOT = os.environ.get("RAW_DATA_PATH", "./dataset")
 
-if ENV_RAW_PATH:
-    print(f"Config: Using RAW_DATA_PATH from Environment: {ENV_RAW_PATH}")
-    RAW_DATA_ROOT = ENV_RAW_PATH
-    
-    # Automatically determine where to save processed data
-    if os.path.exists("/kaggle/working"):
-        PROCESSED_DATA_ROOT = "/kaggle/working/processed_data"
-    else:
-        PROCESSED_DATA_ROOT = os.path.join(PROJECT_ROOT, "processed_data")
-
-elif os.path.exists(DEFAULT_KAGGLE_PATH):
-    print(f"Config: Detected default Kaggle path: {DEFAULT_KAGGLE_PATH}")
-    RAW_DATA_ROOT = DEFAULT_KAGGLE_PATH
-    PROCESSED_DATA_ROOT = "/kaggle/working/processed_data"
-
-else:
-    print("Config: Using Local Project path.")
-    RAW_DATA_ROOT = os.path.join(PROJECT_ROOT, "dataset")
-    PROCESSED_DATA_ROOT = os.path.join(PROJECT_ROOT, "processed_data")
+# 2. Processed Data Path: Where to save .pt files
+# Can be set via 'PROCESSED_DATA_PATH', otherwise defaults to './processed_data'
+PROCESSED_DATA_ROOT = os.environ.get("PROCESSED_DATA_PATH", "./processed_data")
 
 # --- AUDIO CONFIGURATION ---
 # Target sample rate for resampling
