@@ -43,9 +43,10 @@ class ProcessedDataset(Dataset):
         if len(self.files) == 0:
             print(f"Warning: No .pt files found in {self.data_dir}")
         
-        # Initialize Resize transform with LANCZOS interpolation
+        # Initialize Resize transform with BICUBIC interpolation
         # Target size is (224, 224) to match Swin Transformer input requirements
-        self.resize = T.Resize((224, 224), interpolation=InterpolationMode.LANCZOS)
+        # Note: LANCZOS is not supported for Tensors in PyTorch interpolate, so we use BICUBIC.
+        self.resize = T.Resize((224, 224), interpolation=InterpolationMode.BICUBIC)
 
     def __len__(self):
         """Returns the total number of samples in the dataset."""
@@ -69,7 +70,7 @@ class ProcessedDataset(Dataset):
         
         waveform = item['data'] # Original Shape: [1, 128, Time]
         
-        # --- RESIZE TO 224x224 USING LANCZOS ---
+        # --- RESIZE TO 224x224 USING BICUBIC ---
         # torchvision.transforms.Resize expects input Tensor [C, H, W]
         # This ensures the output is always [1, 224, 224] regardless of original time length
         waveform = self.resize(waveform)
